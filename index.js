@@ -1,12 +1,24 @@
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
+
 const app = express();
 const models = require("./models");
-const { send } = require("express/lib/response");
 const port = 8080;
+const static = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, "static/");
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.originalname);
+    },
+  }),
+});
 
 app.use(express.json());
 app.use(cors());
+app.use("/static", express.static("static"));
 
 app.get("/products", (req, res) => {
   models.Product.findAll({
@@ -18,15 +30,21 @@ app.get("/products", (req, res) => {
     })
     .catch((err) => {
       console.error(err);
-      res.send("Cannot get data");
+      res.status(400).send("Cannot get data");
     });
+});
+
+app.post("/image", static.single("image"), function (req, res) {
+  const file = req.file;
+  console.log(file);
+  res.send({ imageUrl: file.path });
 });
 
 app.post("/products", (req, res) => {
   const body = req.body;
   const { name, price, imageUrl, description, seller } = body;
   if (!name || !price || !description || !seller) {
-    res.send("You must fill out all the fields.");
+    res.status(400).send("You must fill out all the fields.");
   } else {
     models.Product.create({
       name,
@@ -40,7 +58,7 @@ app.post("/products", (req, res) => {
       })
       .catch((err) => {
         console.error(err);
-        res.send("There was a problem uploading the product.");
+        res.status(400).send("There was a problem uploading the product.");
       });
   }
 });
@@ -58,7 +76,7 @@ app.get("/products/:id", (req, res) => {
     })
     .catch((err) => {
       console.error(err);
-      res.send("There was a problem getting the product.");
+      res.status(400).send("There was a problem getting the product.");
     });
 });
 
@@ -71,7 +89,7 @@ app.listen(port, () => {
     })
     .catch((err) => {
       console.err(err);
-      console.log("... DB Connection failed ✗ ");
+      console.status(500).log("... DB Connection failed ✗ ");
       process.exit();
     });
 });
